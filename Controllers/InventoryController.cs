@@ -59,6 +59,11 @@ namespace InventoryService.Controllers
             if (dto.Image == null || dto.Image.Length == 0)
                 return BadRequest("Image file is required.");
 
+            // duplicate check (case-insensitive on Name)
+            var exists = await _context.Products
+                .AnyAsync(p => p.Name.ToLower() == dto.Name.ToLower());
+            if (exists) return Conflict(new { message = "Product with this name already exists." });
+
             // Upload to Cloudinary
             var uploadParams = new ImageUploadParams
             {
@@ -141,5 +146,21 @@ namespace InventoryService.Controllers
 
             return NoContent();
         }
+        
+        // PATCH api/inventory/5/adjust-qty?delta=-3  (negative to reduce)
+        [HttpPatch("{id:int}/adjust-qty")]
+        public async Task<IActionResult> AdjustQuantity(int id, [FromQuery] int delta)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            if (delta < 0 && product.Qty + delta < 0)
+                return BadRequest(new { message = "Insufficient stock." });
+
+            product.Qty += delta;
+            await _context.SaveChangesAsync();
+            return Ok(new { product.Id, product.Name, product.Qty });
+        }
+
     }
 }
