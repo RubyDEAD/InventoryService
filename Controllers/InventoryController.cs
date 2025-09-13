@@ -77,7 +77,7 @@ namespace InventoryService.Controllers
                 Name = dto.Name,
                 Price = dto.Price,
                 Qty = dto.Qty,
-                status = dto.status,
+                status = dto.Qty > 0, // 👈 auto-set status
                 Uri = uploadResult.SecureUrl?.ToString() ?? string.Empty,
                 PublicId = uploadResult.PublicId ?? string.Empty
             };
@@ -99,7 +99,7 @@ namespace InventoryService.Controllers
             product.Name = dto.Name;
             product.Price = dto.Price;
             product.Qty = dto.Qty;
-            product.status = dto.status;
+            product.status = dto.Qty > 0; // 👈 auto-set status
 
             if (dto.Image != null)
             {
@@ -122,7 +122,6 @@ namespace InventoryService.Controllers
             return NoContent();
         }
 
-        // DELETE: api/inventory/5 (delete product + image)
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -130,7 +129,6 @@ namespace InventoryService.Controllers
             if (product == null)
                 return NotFound();
 
-            // Delete from Cloudinary
             if (!string.IsNullOrEmpty(product.PublicId))
             {
                 await _cloudinary.DestroyAsync(new DeletionParams(product.PublicId));
@@ -142,7 +140,6 @@ namespace InventoryService.Controllers
             return NoContent();
         }
         
-        // PATCH api/inventory/5/adjust-qty?delta=-3  (negative to reduce)
         [HttpPatch("{id:int}/adjust-qty")]
         public async Task<IActionResult> AdjustQuantity(int id, [FromQuery] int delta)
         {
@@ -153,9 +150,12 @@ namespace InventoryService.Controllers
                 return BadRequest(new { message = "Insufficient stock." });
 
             product.Qty += delta;
-            await _context.SaveChangesAsync();
-            return Ok(new { product.Id, product.Name, product.Qty });
-        }
 
+            // 👇 auto-update status based on Qty
+            product.status = product.Qty > 0;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { product.Id, product.Name, product.Qty, product.status });
+        }
     }
 }
