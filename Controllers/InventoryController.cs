@@ -20,14 +20,12 @@ namespace InventoryService.Controllers
             _cloudinary = cloudinary;
         }
 
-        // GET: api/inventory
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
             return await _context.Products.ToListAsync();
         }
 
-        // GET: api/inventory/5
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Product>> GetProductById(int id)
         {
@@ -38,7 +36,6 @@ namespace InventoryService.Controllers
             return product;
         }
 
-        // GET: api/inventory/byname/Laptop
         [HttpGet("byname/{name}")]
         public async Task<ActionResult<Product>> GetProductByName(string name)
         {
@@ -49,7 +46,6 @@ namespace InventoryService.Controllers
             return product;
         }
 
-        // POST: api/inventory (create with image upload)
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct([FromForm] ProductUploadDto dto)
         {
@@ -93,7 +89,6 @@ namespace InventoryService.Controllers
         }
 
 
-        // PUT: api/inventory/5 (update with optional new image)
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductUploadDto dto)
         {
