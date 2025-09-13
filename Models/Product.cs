@@ -1,9 +1,14 @@
-﻿namespace InventoryService.Models
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+
+namespace InventoryService.Models
 {
+
+    [Index(nameof(Name), IsUnique = true)]
     public class Product
     {
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
+        [Required] public string Name { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Qty { get; set; }
         public bool status { get; set; }
