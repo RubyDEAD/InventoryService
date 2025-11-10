@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using InventoryService.Data;
 using InventoryService.Models;
+using InventoryService.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace InventoryService.Controllers
 {
@@ -13,11 +15,13 @@ namespace InventoryService.Controllers
     {
         private readonly AppDbContext _context;
         private readonly Cloudinary _cloudinary;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public InventoryController(AppDbContext context, Cloudinary cloudinary)
+        public InventoryController(AppDbContext context, Cloudinary cloudinary, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _cloudinary = cloudinary;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -153,7 +157,7 @@ namespace InventoryService.Controllers
 
             // 👇 auto-update status based on Qty
             product.status = product.Qty > 0;
-
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", $"Product '{product.Name}' has New Qty: {product.Qty}");
             await _context.SaveChangesAsync();
             return Ok(new { product.Id, product.Name, product.Qty, product.status });
         }

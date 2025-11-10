@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { HubConnectionBuilder } from "@microsoft/signalr";
 function Inventory() {
   const API_URL = "http://localhost:5145/api/Inventory";
 
@@ -151,6 +151,30 @@ const handleChange = (e) => {
       setError("Adjust qty failed");
     }
   };
+
+  useEffect(() => {
+    const connection = new HubConnectionBuilder()
+      .withUrl("http://localhost:5145/hubs/notifications")
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on("ReceiveNotification", (message) => {
+      console.log("Notification:", message);
+      // Instead of alert (which stacks), use a simpler notification:
+      // You can still use alert(message) if you want, but this avoids spam.
+      window.toast?.(message) || alert(message);
+    });
+
+    connection.start()
+      .then(() => console.log("(Websocket) SignalR Connected"))
+      .catch(err => console.error("SignalR Connection Error:", err));
+
+    // Cleanup to stop connection when component unmounts
+    return () => {
+      connection.stop();
+    };
+  }, []); // Run once only
+
 
   return (
     <div className="p-8 max-w-6xl mx-auto">

@@ -1,7 +1,8 @@
 using CloudinaryDotNet;
 using InventoryService.Data;
 using Microsoft.EntityFrameworkCore;
-
+using InventoryService.Hubs;
+using Microsoft.AspNetCore.SignalR;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -11,9 +12,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:3000")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -30,7 +32,7 @@ builder.Services.AddSingleton(cloudinary);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -51,10 +53,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowAll");
 app.UseAuthorization();
 
-app.UseCors("AllowAll");
 
 app.MapControllers();
+
+app.MapHub<InventoryService.Hubs.NotificationHub>("/hubs/notifications");
+
 
 app.Run();
