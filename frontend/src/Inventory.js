@@ -225,54 +225,55 @@ const handleChange = (e) => {
           <tbody>
             {products.map((p) => (
               <tr key={p.id} className="odd:bg-white even:bg-gray-50">
-                <td className="border p-3">
-                  <img
-                    src={p.uri}
-                    alt={p.name}
-                    className="w-16 h-16 object-cover rounded"
-                  />
-                </td>
-                <td className="border p-3">{p.name}</td>
-                <td className="border p-3">₱{p.price}</td>
-                <td className="border p-3">{p.qty}</td>
-                <td className="border p-3">
-                <td className="border p-3">
-                  {p.status ? (
-                    <span className="text-green-600 font-medium">Available</span>
-                  ) : (
-                    <span className="text-red-600 font-medium">Unavailable</span>
-                  )}
-                </td>
-                </td>
-                <td className="border p-3 space-x-2">
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                  >
-                    Remove
-                  </button>
-                  <button
-                    onClick={() => handleAdjustQty(p.id, 1)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => handleAdjustQty(p.id, -1)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded"
-                  >
-                    -1
-                  </button>
-                </td>
-              </tr>
-            ))}
+              <td className="border p-3">
+                <img
+                  src={p.uri}
+                  alt={p.name}
+                  className="w-16 h-16 object-cover rounded"
+                />
+              </td>
 
+              <td className="border p-3">{p.name}</td>
+              <td className="border p-3">₱{p.price}</td>
+              <td className="border p-3">{p.qty}</td>
+
+              {/* FIXED STATUS CELL */}
+              <td className="border p-3">
+                {p.status ? (
+                  <span className="text-green-600 font-medium">Available</span>
+                ) : (
+                  <span className="text-red-600 font-medium">Unavailable</span>
+                )}
+              </td>
+
+              <td className="border p-3 space-x-2">
+                <button
+                  onClick={() => handleEdit(p)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                >
+                  Remove
+                </button>
+                <button
+                  onClick={() => handleAdjustQty(p.id, 1)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                >
+                  +1
+                </button>
+                <button
+                  onClick={() => handleAdjustQty(p.id, -1)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded"
+                >
+                  -1
+                </button>
+              </td>
+            </tr>
+            ))}
             {!loading && products.length === 0 && (
               <tr>
                 <td colSpan="6" className="text-center p-4 text-gray-500">
