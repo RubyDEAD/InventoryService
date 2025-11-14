@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HubConnectionBuilder } from "@microsoft/signalr";
+
 function Inventory() {
   const API_URL = "http://localhost:5145/api/Inventory";
 
@@ -16,9 +17,12 @@ function Inventory() {
     status: true,
     image: null,
   });
-  
 
-  // Load all products
+  const [toasts, setToasts] = useState([]);
+
+  // ---------------------------
+  // LOAD PRODUCTS
+  // ---------------------------
   const loadProducts = async () => {
     setLoading(true);
     setError("");
@@ -39,15 +43,16 @@ function Inventory() {
     loadProducts();
   }, []);
 
-  // Search by name
+  // ---------------------------
+  // SEARCH
+  // ---------------------------
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!search) {
-      loadProducts();
-      return;
-    }
+    if (!search) return loadProducts();
+
     setLoading(true);
     setError("");
+
     try {
       const res = await fetch(`${API_URL}/byname/${search}`);
       if (res.ok) {
@@ -63,30 +68,32 @@ function Inventory() {
     }
   };
 
-// Handle input changes
-const handleChange = (e) => {
-  const { name, value, type, checked, files } = e.target;
+  // ---------------------------
+  // FORM CHANGE
+  // ---------------------------
+  const handleChange = (e) => {
+    const { name, value, type, checked, files } = e.target;
 
-  if (type === "file") {
-    setForm({ ...form, image: files[0] });
-  } else if (type === "checkbox") {
-    // Only allow checkbox if qty > 0
-    if (form.qty > 0) {
-      setForm({ ...form, [name]: checked });
+    if (type === "file") {
+      setForm({ ...form, image: files[0] });
+    } else if (type === "checkbox") {
+      if (form.qty > 0) {
+        setForm({ ...form, [name]: checked });
+      }
+    } else {
+      let updatedForm = { ...form, [name]: value };
+      if (name === "qty") {
+        const qtyVal = parseInt(value, 10) || 0;
+        updatedForm.qty = qtyVal;
+        updatedForm.status = qtyVal > 0;
+      }
+      setForm(updatedForm);
     }
-  } else {
-    let updatedForm = { ...form, [name]: value };
-    if (name === "qty") {
-      const qtyVal = parseInt(value, 10) || 0;
-      updatedForm.qty = qtyVal;
-      updatedForm.status = qtyVal > 0; // auto set status
-    }
-    setForm(updatedForm);
-  }
-};
+  };
 
-
-  // Add or update product
+  // ---------------------------
+  // SUBMIT (ADD/EDIT)
+  // ---------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -109,6 +116,7 @@ const handleChange = (e) => {
           body: formData,
         });
       }
+
       setForm({ id: null, name: "", price: "", qty: "", status: true, image: null });
       document.getElementById("imageInput").value = "";
       setShowModal(false);
@@ -118,7 +126,9 @@ const handleChange = (e) => {
     }
   };
 
-  // Edit product
+  // ---------------------------
+  // EDIT
+  // ---------------------------
   const handleEdit = (p) => {
     setForm({
       id: p.id,
@@ -131,6 +141,9 @@ const handleChange = (e) => {
     setShowModal(true);
   };
 
+  // ---------------------------
+  // DELETE
+  // ---------------------------
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
     try {
@@ -141,6 +154,9 @@ const handleChange = (e) => {
     }
   };
 
+  // ---------------------------
+  // QTY ADJUST
+  // ---------------------------
   const handleAdjustQty = async (id, delta) => {
     try {
       const res = await fetch(`${API_URL}/${id}/adjust-qty?delta=${delta}`, {
@@ -152,6 +168,19 @@ const handleChange = (e) => {
     }
   };
 
+  // ---------------------------
+  // TOAST
+  // ---------------------------
+  const pushToast = (message) => {
+    setToasts((prev) => [...prev, message]);
+    setTimeout(() => {
+      setToasts((prev) => prev.slice(1));
+    }, 4000);
+  };
+
+  // ---------------------------
+  // SIGNALR CONNECTION
+  // ---------------------------
   useEffect(() => {
     const connection = new HubConnectionBuilder()
       .withUrl("http://localhost:5145/hubs/notifications")
@@ -160,20 +189,16 @@ const handleChange = (e) => {
 
     connection.on("ReceiveNotification", (message) => {
       console.log("Notification:", message);
-      // Instead of alert (which stacks), use a simpler notification:
-      // You can still use alert(message) if you want, but this avoids spam.
-      window.toast?.(message) || alert(message);
+      // window.toast?.(message) || alert(message);
+      pushToast(message);
     });
 
     connection.start()
       .then(() => console.log("(Websocket) SignalR Connected"))
-      .catch(err => console.error("SignalR Connection Error:", err));
+      .catch((err) => console.error("SignalR Error:", err));
 
-    // Cleanup to stop connection when component unmounts
-    return () => {
-      connection.stop();
-    };
-  }, []); // Run once only
+    return () => connection.stop();
+  }, []);
 
 
   return (
@@ -365,6 +390,16 @@ const handleChange = (e) => {
           </div>
         </div>
       )}
+      <div className="fixed top-4 right-4 space-y-2 z-[9999]">
+  {toasts.map((msg, i) => (
+          <div
+            key={i}
+            className="animate-slide-in bg-gray-800 text-white px-4 py-2 rounded shadow-lg"
+          >
+            {msg}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
