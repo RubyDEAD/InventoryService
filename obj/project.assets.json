@@ -2832,23 +2832,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ReitzDaveAndriano\\.nuget\\packages\\": {},
+    "C:\\Users\\reitz\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ReitzDaveAndriano\\InventoryService\\InventoryService.csproj",
+      "projectUniqueName": "E:\\InventoryService\\InventoryService.csproj",
       "projectName": "InventoryService",
-      "projectPath": "C:\\Users\\ReitzDaveAndriano\\InventoryService\\InventoryService.csproj",
-      "packagesPath": "C:\\Users\\ReitzDaveAndriano\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ReitzDaveAndriano\\InventoryService\\obj\\",
+      "projectPath": "E:\\InventoryService\\InventoryService.csproj",
+      "packagesPath": "C:\\Users\\reitz\\.nuget\\packages\\",
+      "outputPath": "E:\\InventoryService\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\ReitzDaveAndriano\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\reitz\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],

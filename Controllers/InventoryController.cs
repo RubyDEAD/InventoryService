@@ -59,12 +59,12 @@ namespace InventoryService.Controllers
             if (dto.Image == null || dto.Image.Length == 0)
                 return BadRequest("Image file is required.");
 
-            // duplicate check (case-insensitive on Name)
+            
             var exists = await _context.Products
                 .AnyAsync(p => p.Name.ToLower() == dto.Name.ToLower());
             if (exists) return Conflict(new { message = "Product with this name already exists." });
 
-            // Upload to Cloudinary
+            
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(dto.Image.FileName, dto.Image.OpenReadStream())
@@ -75,13 +75,13 @@ namespace InventoryService.Controllers
             if (uploadResult == null || uploadResult.Error != null)
                 return StatusCode(500, $"Image upload failed: {uploadResult?.Error?.Message}");
 
-            // Save product in DB
+            
             var product = new Product
             {
                 Name = dto.Name,
                 Price = dto.Price,
                 Qty = dto.Qty,
-                status = dto.Qty > 0, // 👈 auto-set status
+                status = dto.Qty > 0,
                 Uri = uploadResult.SecureUrl?.ToString() ?? string.Empty,
                 PublicId = uploadResult.PublicId ?? string.Empty
             };
@@ -103,7 +103,7 @@ namespace InventoryService.Controllers
             product.Name = dto.Name;
             product.Price = dto.Price;
             product.Qty = dto.Qty;
-            product.status = dto.Qty > 0; // 👈 auto-set status
+            product.status = dto.Qty > 0;
 
             if (dto.Image != null)
             {
@@ -155,11 +155,11 @@ namespace InventoryService.Controllers
 
             product.Qty += delta;
 
-            // 👇 auto-update status based on Qty
             product.status = product.Qty > 0;
             await _hubContext.Clients.All.SendAsync("ReceiveNotification", $"Product '{product.Name}' has New Qty: {product.Qty}");
             await _context.SaveChangesAsync();
             return Ok(new { product.Id, product.Name, product.Qty, product.status });
         }
+
     }
 }
