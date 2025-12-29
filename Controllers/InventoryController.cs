@@ -87,6 +87,7 @@ namespace InventoryService.Controllers
             };
 
             _context.Products.Add(product);
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", $"Product '{product.Name}' has been created");
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
@@ -122,6 +123,7 @@ namespace InventoryService.Controllers
                 product.PublicId = uploadResult.PublicId;
             }
 
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", $"Product '{product.Name}' has been Updated");
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -139,6 +141,7 @@ namespace InventoryService.Controllers
             }
 
             _context.Products.Remove(product);
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", $"Product '{product.Name}' has been Deleted");
             await _context.SaveChangesAsync();
 
             return NoContent();
