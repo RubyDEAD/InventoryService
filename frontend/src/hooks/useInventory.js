@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
-import { useSignalR } from "./useSignalR"; // Import the hook
+// In your useInventory.js
+import { useEffect, useState, useRef } from "react";
+import { useSignalR } from "./useSignalR";
 
 const API_URL = "http://localhost:5145/api/Inventory";
 
@@ -7,30 +8,58 @@ export function useInventory() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [notification, setNotification] = useState("");
+  
+  // Track processed SignalR updates to prevent duplicates
+  const processedUpdatesRef = useRef(new Set());
 
-  // Handle inventory updates from SignalR
-  const handleInventoryUpdate = useCallback((action, product) => {
-    console.log("Inventory update:", action, product);
+  const loadProducts = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      setProducts(data);
+      
+      // Clear processed updates when we load fresh data
+      processedUpdatesRef.current.clear();
+    } catch (err) {
+      setError(err.message);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle SignalR updates
+  const handleInventoryUpdate = (action, product) => {
+    const updateKey = `${action}-${product.id}-${Date.now()}`;
+    
+    // Skip if we've already processed this update
+    if (processedUpdatesRef.current.has(updateKey)) {
+      return;
+    }
+    
+    processedUpdatesRef.current.add(updateKey);
     
     setProducts(prevProducts => {
       switch(action) {
         case "Product added":
-          // Add new product
+          const alreadyExists = prevProducts.some(p => p.id === product.id);
+          if (alreadyExists) {
+            return prevProducts; 
+          }
           return [...prevProducts, product];
           
         case "Product updated":
-          // Update existing product
           return prevProducts.map(p => 
             p.id === product.id ? product : p
           );
           
         case "Product deleted":
-          // Remove deleted product
           return prevProducts.filter(p => p.id !== product.id);
           
         case "Product quantity adjusted":
-          // Update quantity only
           return prevProducts.map(p => 
             p.id === product.id 
               ? { ...p, qty: product.qty, status: product.status }
@@ -42,49 +71,23 @@ export function useInventory() {
       }
     });
     
-    // Show notification
-    setNotification(`${action}: ${product.name}`);
-    setTimeout(() => setNotification(""), 3000);
-  }, []);
-
-  // Handle general notifications
-  const handleNotification = useCallback((message) => {
-    console.log("Notification:", message);
-    setNotification(message);
-    setTimeout(() => setNotification(""), 3000);
-  }, []);
-
-  // Use SignalR hook
-  useSignalR("http://localhost:5145/hubs/inventory", {
-    "InventoryUpdated": handleInventoryUpdate,
-    "ReceiveNotification": handleNotification
-  });
-
-  const loadProducts = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error("Failed to fetch products");
-      setProducts(await res.json());
-    } catch (err) {
-      setError(err.message);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      processedUpdatesRef.current.delete(updateKey);
+    }, 5000);
   };
+
+  useSignalR("http://localhost:5145/hubs/inventory", {
+    "InventoryUpdated": handleInventoryUpdate
+  });
 
   const deleteProduct = async (id) => {
     await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    // State will update automatically via SignalR
   };
 
   const adjustQty = async (id, delta) => {
     await fetch(`${API_URL}/${id}/adjust-qty?delta=${delta}`, {
       method: "PATCH",
     });
-    // State will update automatically via SignalR
   };
 
   const createProduct = async (formData) => {
@@ -92,6 +95,11 @@ export function useInventory() {
       method: "POST",
       body: formData,
     });
+    
+    if (!res.ok) {
+      throw new Error("Failed to create product");
+    }
+    
     return await res.json();
   };
 
@@ -100,10 +108,14 @@ export function useInventory() {
       method: "PUT",
       body: formData,
     });
+    
+    if (!res.ok) {
+      throw new Error("Failed to update product");
+    }
+    
     return res.ok;
   };
 
-  // Initial load
   useEffect(() => {
     loadProducts();
   }, []);
@@ -112,7 +124,6 @@ export function useInventory() {
     products,
     loading,
     error,
-    notification,
     loadProducts,
     deleteProduct,
     adjustQty,
