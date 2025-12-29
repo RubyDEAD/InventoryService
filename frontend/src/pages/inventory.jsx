@@ -358,14 +358,14 @@ function Inventory() {
                     <div className="mb-6">
                       <div className="flex justify-between text-sm text-gray-500 mb-1">
                         <span>Stock Level</span>
-                        <span>{Math.min(100, (p.qty / 20) * 100)}%</span>
+                        <span>{Math.round(Math.min(100, (p.qty / 20) * 100))}%</span>
                       </div>
                       <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${
                             p.qty < 5 ? "bg-red-500" : "bg-green-500"
                           }`}
-                          style={{ width: `${Math.min(100, (p.qty / 20) * 100)}%` }}
+                          style={{ width: `${Math.round(Math.min(100, (p.qty / 20) * 100))}%` }}
                         />
                       </div>
                     </div>
