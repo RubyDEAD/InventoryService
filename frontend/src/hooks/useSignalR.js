@@ -1,25 +1,85 @@
-import { useEffect, useCallback } from "react";
-import { HubConnectionBuilder } from "@microsoft/signalr";
+import { useEffect, useRef, useCallback } from "react";
+import * as signalR from "@microsoft/signalr";
 
 export function useSignalR(url, events = {}) {
+  const connectionRef = useRef(null);
+  const eventsRef = useRef(events);
+
   useEffect(() => {
-    const connection = new HubConnectionBuilder()
-      .withUrl(url)
-      .withAutomaticReconnect()
-      .build();
+    eventsRef.current = events;
+  }, [events]);
 
-    // Register all event handlers
-    Object.entries(events).forEach(([eventName, handler]) => {
-      connection.on(eventName, handler);
-    });
+  const startConnection = useCallback(async () => {
+    if (connectionRef.current && connectionRef.current.state === signalR.HubConnectionState.Connected) {
+      return;
+    }
 
-    connection
-      .start()
-      .then(() => console.log(`SignalR Connected to ${url}`))
-      .catch((err) => console.error("SignalR Error:", err));
+    try {
+      if (connectionRef.current) {
+        await connectionRef.current.stop();
+      }
+
+      const connection = new signalR.HubConnectionBuilder()
+        .withUrl(url)
+        .withAutomaticReconnect({
+          nextRetryDelayInMilliseconds: (retryContext) => {
+            console.log(`SignalR retry attempt ${retryContext.previousRetryCount + 1}`);
+            return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+          }
+        })
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
+      Object.entries(eventsRef.current).forEach(([eventName, handler]) => {
+        connection.on(eventName, handler);
+      });
+
+      connection.onclose((error) => {
+        console.log("SignalR connection closed:", error?.message || "No error");
+      });
+
+      connection.onreconnecting((error) => {
+        console.log("SignalR reconnecting:", error?.message || "No error");
+      });
+
+      connection.onreconnected((connectionId) => {
+        console.log("SignalR reconnected. Connection ID:", connectionId);
+      });
+
+      await connection.start();
+      console.log(`SignalR Connected to ${url}`);
+      connectionRef.current = connection;
+
+    } catch (err) {
+      console.error("SignalR Connection Error:", err);
+    }
+  }, [url]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeConnection = async () => {
+      if (isMounted) {
+        await startConnection();
+      }
+    };
+
+    initializeConnection();
 
     return () => {
-      connection.stop();
+      isMounted = false;
+      
+      if (connectionRef.current) {
+        console.log("Cleaning up SignalR connection");
+        connectionRef.current.stop().catch(err => {
+          console.error("Error stopping SignalR connection:", err);
+        });
+      }
     };
-  }, [url, events]); 
+  }, [startConnection]);
+
+  return {
+    connection: connectionRef.current,
+    restartConnection: startConnection
+  };
 }
