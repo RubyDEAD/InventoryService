@@ -1,17 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useInventory } from "../hooks/useInventory";
 import { useSignalR } from "../hooks/useSignalR";
 import { useToast } from "../hooks/useToast";
 import { Search, Plus, Edit, Trash2, Package, DollarSign, BarChart, Filter, Eye, EyeOff, TrendingUp, TrendingDown } from "lucide-react";
 
 function Inventory() {
-  const API_URL = "http://localhost:5145/api/Inventory";
-
-  const { products, loading, error, loadProducts, deleteProduct, adjustQty } =
-    useInventory();
+  const { 
+    products, 
+    loading, 
+    error, 
+    notification,
+    loadProducts, 
+    deleteProduct, 
+    adjustQty,
+    createProduct,
+    updateProduct
+  } = useInventory();
 
   const { toasts, pushToast } = useToast();
-  useSignalR(pushToast);
+  
+  // Use SignalR for real-time notifications
+  const handleNotification = useCallback((message) => {
+    pushToast(message);
+  }, [pushToast]);
+
+  const handleInventoryUpdate = useCallback((action, product) => {
+    pushToast(`${action}: ${product.name}`);
+  }, [pushToast]);
+
+  // Connect to both SignalR hubs
+  useSignalR("http://localhost:5145/hubs/inventory", {
+    "InventoryUpdated": handleInventoryUpdate
+  });
+
+  useSignalR("http://localhost:5145/hubs/notifications", {
+    "ReceiveNotification": handleNotification
+  });
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -24,6 +48,13 @@ function Inventory() {
     status: true,
     image: null,
   });
+
+  // Show notification from inventory hook
+  useEffect(() => {
+    if (notification) {
+      pushToast(notification);
+    }
+  }, [notification, pushToast]);
 
   const stats = {
     totalProducts: products.length,
@@ -79,18 +110,9 @@ function Inventory() {
     }
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = (e) => {
     e.preventDefault();
-    if (!search) return loadProducts();
-
-    try {
-      const res = await fetch(`${API_URL}/byname/${search}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      pushToast("Search completed");
-    } catch {
-      pushToast("Search failed");
-    }
+    // Real-time filtering is handled by the filteredProducts function
   };
 
   const handleChange = (e) => {
@@ -117,18 +139,19 @@ function Inventory() {
 
     const formData = new FormData();
     formData.append("Name", form.name);
-    formData.append("Price", form.price);
-    formData.append("Qty", form.qty);
+    formData.append("Price", parseFloat(form.price));
+    formData.append("Qty", parseInt(form.qty, 10));
     formData.append("status", form.status);
     if (form.image) formData.append("Image", form.image);
 
     try {
-      await fetch(form.id ? `${API_URL}/${form.id}` : API_URL, {
-        method: form.id ? "PUT" : "POST",
-        body: formData,
-      });
-
-      pushToast(form.id ? "Product updated" : "Product added");
+      if (form.id) {
+        await updateProduct(form.id, formData);
+        pushToast("Product updated");
+      } else {
+        await createProduct(formData);
+        pushToast("Product added");
+      }
 
       setForm({
         id: null,
@@ -141,9 +164,10 @@ function Inventory() {
 
       document.getElementById("imageInput").value = "";
       setShowModal(false);
-      loadProducts();
-    } catch {
+      // No need to call loadProducts() - SignalR will handle real-time updates
+    } catch (err) {
       pushToast("Save failed");
+      console.error(err);
     }
   };
 
@@ -161,8 +185,12 @@ function Inventory() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
-    await deleteProduct(id);
-    pushToast("Product removed");
+    try {
+      await deleteProduct(id);
+      pushToast("Product removed");
+    } catch (err) {
+      pushToast("Delete failed");
+    }
   };
 
   return (
@@ -282,7 +310,6 @@ function Inventory() {
           </div>
         ) : (
           <>
-            {/* Product Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((p) => (
                 <div
@@ -296,6 +323,10 @@ function Inventory() {
                       src={p.uri} 
                       alt={p.name}
                       className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/300x200?text=No+Image";
+                      }}
                     />
                     <div className="absolute top-4 right-4">
                       <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -440,6 +471,8 @@ function Inventory() {
                   placeholder="0.00"
                   value={form.price}
                   onChange={handleChange}
+                  step="0.01"
+                  min="0"
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -455,6 +488,7 @@ function Inventory() {
                   placeholder="0"
                   value={form.qty}
                   onChange={handleChange}
+                  min="0"
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />

@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://192.168.1.15:3000")
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://192.168.1.15:3000")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -59,6 +59,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHub<InventoryService.Hubs.NotificationHub>("/hubs/notifications");
-
+app.MapHub<InventoryService.Hubs.InventoryHub>("/hubs/inventory");
 
 app.Run();

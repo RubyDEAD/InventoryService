@@ -1,24 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { HubConnectionBuilder } from "@microsoft/signalr";
 
-export function useSignalR(onMessage) {
+export function useSignalR(url, events = {}) {
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl("http://localhost:5145/hubs/notifications")
+      .withUrl(url)
       .withAutomaticReconnect()
       .build();
 
-    connection.on("ReceiveNotification", (message) => {
-      onMessage(message);
+    // Register all event handlers
+    Object.entries(events).forEach(([eventName, handler]) => {
+      connection.on(eventName, handler);
     });
 
     connection
       .start()
-      .then(() => console.log("✅ SignalR Connected"))
+      .then(() => console.log(`SignalR Connected to ${url}`))
       .catch((err) => console.error("SignalR Error:", err));
 
     return () => {
       connection.stop();
     };
-  }, [onMessage]);
+  }, [url, events]); 
 }
